@@ -20,12 +20,36 @@ function field_css_field_info() {
   );
 }
 
+
+
+/**
+ * helper function to post process data for save
+ * remove white spaces, [ and ] from style
+ */
+function field_css_post_process($widget_type, $items) {
+  
+  foreach($items as &$item) {
+    $item['style'] = preg_replace("/[{}]/", "", $item['style']);
+    $item['style'] = trim($item['style']);
+  }
+  return $items;
+}
+
+/**
+ * Implements hook_field_presave()
+ */
+function field_css_field_presave($entity_type, $entity, $field, $instance, $langcode, &$items) {
+  $items = field_css_post_process("type", $items);
+}
+
 /**
  * Implements hook_field_validate().
  *
  * @see field_css_field_widget_error()
  */
 function field_css_field_validate($entity_type, $entity, $field, $instance, $langcode, $items, &$errors) {
+  //lets test items as if they were going to be saved
+  $items = field_css_post_process("type", $items);
   foreach ($items as $delta => $item) {
     if (!empty($item['selector'])) {
       if (preg_match('[{}]', $item['selector'])) {
@@ -187,9 +211,10 @@ function field_css_field_widget_form(&$form, &$form_state, $field, $instance, $l
       $element['#attributes']['class'][] ="field-css-stff";
       
     case 'field_css_freeform_widget':
-    field_css_attach_syntax_highlighting($element['style']);
+      
       
   };
+  field_css_attach_syntax_highlighting($element['style']);
   return $element;
 }
 
