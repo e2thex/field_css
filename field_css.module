@@ -27,7 +27,6 @@ function field_css_field_info() {
  */
 function field_css_field_validate($entity_type, $entity, $field, $instance, $langcode, $items, &$errors) {
   foreach ($items as $delta => $item) {
-    dpm($item);
     if (!empty($item['selector'])) {
       if (preg_match('[{}]', $item['selector'])) {
         $errors[$field['field_name']][$langcode][$delta][] = array(
@@ -45,7 +44,6 @@ function field_css_field_validate($entity_type, $entity, $field, $instance, $lan
       }
     }
   }
-  dpm($errors);
 }
 
 
@@ -165,7 +163,6 @@ function field_css_get_prefix($field, $entity_type, $entity) {
  * Implements hook_field_widget_form().
  */
 function field_css_field_widget_form(&$form, &$form_state, $field, $instance, $langcode, $items, $delta, $element) {
-  dpm(func_get_args(),__FUNCTION__);
   $value = isset($items[$delta]) ? $items[$delta] : array("selector"=>"", "style" => "");
   switch ($instance['widget']['type']) {
 
@@ -193,7 +190,6 @@ function field_css_field_widget_form(&$form, &$form_state, $field, $instance, $l
     field_css_attach_syntax_highlighting($element['style']);
       
   };
-  dpm($element, "element");
   return $element;
 }
 
