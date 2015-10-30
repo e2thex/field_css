@@ -1,0 +1,250 @@
+<?php
+/**
+ * @file
+ * This file implements the field_css field
+ */
+
+/**
+ * Implements hook_field_info().
+ *
+ */
+function field_css_field_info() {
+  return array(
+    // We name our field as the associative name of the array.
+    'field_css_field' => array(
+      'label' => t('CSS'),
+      'description' => t('Allow limited css markup'),
+      'default_widget' => 'field_css_structured_widget',
+      'default_formatter' => 'field_css_style_tag_formatter',
+    ),
+  );
+}
+
+/**
+ * Implements hook_field_validate().
+ *
+ * @see field_css_field_widget_error()
+ */
+function field_css_field_validate($entity_type, $entity, $field, $instance, $langcode, $items, &$errors) {
+  foreach ($items as $delta => $item) {
+    dpm($item);
+    if (!empty($item['selector'])) {
+      if (preg_match('[{}]', $item['selector'])) {
+        $errors[$field['field_name']][$langcode][$delta][] = array(
+          'error' => 'Selector not valid',
+          'message' => t('Selector can not contain { or }.'),
+        );
+      }
+    }
+    if (!empty($item['style'])) {
+      if (preg_match('[{}]', $item['style'])) {
+        $errors[$field['field_name']][$langcode][$delta][] = array(
+          'error' => 'Style not valid',
+          'message' => t('Style can not contain { or }.'),
+        );
+      }
+    }
+  }
+  dpm($errors);
+}
+
+
+/**
+ * Implements hook_field_is_empty().
+ *
+ */
+function field_css_field_is_empty($item, $field) {
+  return empty($item['selector']);
+}
+
+/**
+ *Implements hook_field_formatter_info().
+ * 
+ * @see field_css_field_formatter_view()
+ */
+function field_css_field_formatter_info() {
+  return array(
+    // This formatter just displays the hex value in the color indicated.
+    'field_css_style_tag_formatter' => array(
+      'label' => t('Style Tag'),
+      'field types' => array('field_css_field'),
+    ),
+    'field_css_add_css_formatter' => array(
+      'label' => t('Add CSS function'),
+      'field types' => array('field_css_field'),
+    ),
+  );
+}
+
+/**
+ * Implements hook_field_formatter_view().
+ *
+ * @see field_css_field_formatter_info()
+ */
+function field_css_field_formatter_view($entity_type, $entity, $field, $instance, $langcode, $items, $display) {
+  $entity_info = entity_get_info($entity_type);
+  $prefix = field_css_get_prefix($field, $entity_type, $entity);
+  $element = array();
+  $css = "";
+
+  foreach ($items as $delta => $item) {
+    $css .= t("@prefix @selector { \n @style \n}\n", array("@prefix" => $prefix, "@selector" => $item['selector'], "@style" => $item['style']));
+  }
+
+  switch ($display['type']) {
+    // This formatter simply outputs the field as text and with a color.
+    case 'field_css_style_tag_formatter':
+
+      $element[0] = array(
+        '#type' => 'html_tag',
+        '#tag' => 'style',
+        '#value' => $css
+      );
+    case 'field_css_add_css_formatter':
+      drupal_add_css($css, array("type"=>"inline"));
+  }
+  return $element;
+}
+
+/**
+ * Implements hook_field_widget_info().
+ *
+ * @see field_css_field_widget_form()
+ */
+function field_css_field_widget_info() {
+  return array(
+    'field_css_structured_widget' => array(
+      'label' => t('Structured'),
+      'field types' => array('field_css_field'),
+    ),
+    'field_css_freeform_widget' => array(
+      'label' => t('Free form'),
+      'field types' => array('field_css_field'),
+    ),
+  );
+}
+
+/**
+ * Implements hook_field_widget_settings_form()
+ */
+
+function field_css_field_settings_form($field, $instance, $has_data) {
+  $settings = $field['settings'];
+  $form['prefix'] = array(
+    '#type' => 'select',
+    '#title' => t('Selector Prefix'),
+    '#default_value' => $settings['prefix'],
+    '#options' => array(
+        "none" => "None",
+        "entity-item" => "EntityType-Id (e.g. node-4938)"
+    ),
+    '#required' => FALSE,
+    '#description' => t('What selector should prefix all css rules.'),
+  );
+  return $form;
+}
+/**
+ * helper function to parse setting and generate the wiget
+ */
+function field_css_get_prefix($field, $entity_type, $entity) {
+  $prefix = "";
+  $prefix_type = $field['settings']['prefix'];
+  switch ($prefix_type) {
+    case 'entity-item':
+      $entity_info = entity_get_info($entity_type);
+      $id = isset($entity->{$entity_info['entity keys']['id']}) ? $entity->{$entity_info['entity keys']['id']} : "###";
+      $prefix = ".". $entity_type . "-" . $id;
+    case 'none':
+      
+  }
+  return $prefix;
+
+}
+
+/**
+ * Implements hook_field_widget_form().
+ */
+function field_css_field_widget_form(&$form, &$form_state, $field, $instance, $langcode, $items, $delta, $element) {
+  dpm(func_get_args(),__FUNCTION__);
+  $value = isset($items[$delta]) ? $items[$delta] : array("selector"=>"", "style" => "");
+  switch ($instance['widget']['type']) {
+
+    case 'field_css_structured_widget':
+      $element['selector'] = array(
+        '#type' => 'textfield',
+        '#title' => '',
+        '#prefix' => field_css_get_prefix($field, $element['#entity_type'], $element['#entity']),
+        '#default_value' => $value['selector'],
+        '#attributes' => array('class' => array("field-css-selector", "field-css-wrapped")),
+      );
+      $element['style'] = array(
+        '#type' => 'textarea',
+        '#title' => '',
+        '#desciption' => "",
+        '#default_value' => $value['style'],
+        '#attributes' => array('class' => array("field-css-style", "field-css-wrapped")),
+      );
+      $element['#attached']['css'] = array(
+        drupal_get_path('module', 'field_css') . '/field_css.admin.css',
+      );
+      $element['#attributes']['class'][] ="field-css-stff";
+      
+    case 'field_css_freeform_widget':
+    field_css_attach_syntax_highlighting($element['style']);
+      
+  };
+  dpm($element, "element");
+  return $element;
+}
+
+/**
+ * Implements hook_field_widget_error().
+ *
+ * hook_field_widget_error() lets us figure out what to do with errors
+ * we might have generated in hook_field_validate(). Generally, we'll just
+ * call form_error().
+ *
+ * @see field_css_field_validate()
+ * @see form_error()
+ */
+function field_css_field_widget_error($element, $error, $form, &$form_state) {
+      form_error($element, $error['message']);
+}
+
+/**
+ * Returns path to CodeMirror, or FALSE if not found.
+ *  
+ * Thank you to http://www.drupal.org/projects/cpn
+ */
+function field_css_codemirror() {
+  static $path;
+
+  // Only process this once per page load.
+  if (is_null($path)) {
+    if (module_exists('libraries')) {
+      $path = libraries_get_path('codemirror');
+    }
+    else {
+      $path = 'sites/all/libraries/codemirror';
+    }
+    $path = file_exists($path) && is_dir($path) ? $path : FALSE;
+  }
+
+  return $path;
+}
+
+/**
+ * Attaches syntax highlighting to a form element.
+ * Thank you to http://www.drupal.org/projects/cpn
+ */
+function field_css_attach_syntax_highlighting(&$form) {
+  $path = field_css_codemirror();
+  if (!empty($path)) {
+    $form['#attached']['js'][] = $path . '/lib/codemirror.js';
+    $form['#attached']['css'][] = $path . '/lib/codemirror.css';
+    $form['#attached']['js'][] = $path . '/mode/css/css.js';
+    $form['#attached']['js'][] = drupal_get_path('module', 'field_css') . '/field_css.js';
+  }
+}
+
+
