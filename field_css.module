@@ -150,7 +150,6 @@ function field_css_field_formatter_view($entity_type, $entity, $field, $instance
   }
 
   switch ($display['type']) {
-    // This formatter simply outputs the field as text and with a color.
     case 'field_css_style_tag_formatter':
 
       $element[0] = array(
@@ -323,5 +322,4 @@ function field_css_attach_syntax_highlighting(&$form) {
     $form['#attached']['js'][] = drupal_get_path('module', 'field_css') . '/field_css.js';
   }
 }
-
 
