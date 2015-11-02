@@ -194,13 +194,22 @@ function field_css_field_settings_form($field, $instance, $has_data) {
     '#default_value' => $settings['prefix'],
     '#options' => array(
         "none" => "None",
-        "entity-item" => "EntityType-Id (e.g. node-4938)"
+        "entity-item" => "EntityType-Id (e.g. node-4938)",
+        "fixed-value" => "Fixed Value"
     ),
     '#required' => FALSE,
     '#description' => t('What selector should prefix all css rules.'),
   );
+    $form['prefix_value'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Prefix Value'),
+      '#default_value' => $settings['prefix_value'],
+      '#required' => FALSE,
+      '#description' => t('Proved the fixed value decloration that shall prefix all custom declorations.(Only used with Fix Value above).'),
+    );
   return $form;
 }
+
 /**
  * helper function to parse setting and generate the wiget
  */
@@ -212,6 +221,9 @@ function field_css_get_prefix($field, $entity_type, $entity) {
       $entity_info = entity_get_info($entity_type);
       $id = isset($entity->{$entity_info['entity keys']['id']}) ? $entity->{$entity_info['entity keys']['id']} : "###";
       $prefix = ".". $entity_type . "-" . $id;
+    break;
+    case 'fixed-value';
+      $prefix = $field['settings']['prefix_value'];
     break;
     case 'none':
       
@@ -254,7 +266,7 @@ function field_css_field_widget_form(&$form, &$form_state, $field, $instance, $l
         $element['style'] = array(
           '#type' => 'textarea',
           '#title' => '',
-          '#desciption' => "",
+          '#prefix' => t("All declorations will be prefixed by '@prefix'.", array("@prefix" => field_css_get_prefix($field, $element['#entity_type'], $element['#entity']))),
           '#default_value' => array_reduce($items, function($c, $i) { return $c . field_css_parse_field($i);}, ""),
           '#attributes' => array('class' => array("field-css-style", "field-css-wrapped")),
         );
