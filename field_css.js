@@ -8,10 +8,9 @@
 
     attach: function(context, settings) {
       // Append enable/disable links.
-      $('.field-widget-field-css-structured-widget .form-textarea-wrapper', context).each(function() {
+      $('.field-type-field-css-field .form-textarea-wrapper', context).each(function() {
         $(this).after(' <a href="#" class="field_css-toggle">Enable syntax highlighting</a>.');
           var $textarea = $(this).parents('.form-type-textarea').find('textarea');
-          $textarea.val("{\n" + $textarea.val() + "\n}");
       });
 
       // Toggle syntax highlighting.

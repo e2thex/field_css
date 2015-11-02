@@ -20,26 +20,56 @@ function field_css_field_info() {
   );
 }
 
-
-
 /**
  * helper function to post process data for save
- * remove white spaces, [ and ] from style
+ * remove white spaces, { and } from style
+ *
+ * it also post converts feeform widgets fields into the structured data fields
  */
 function field_css_post_process($widget_type, $items) {
-  
+  switch ($widget_type) {
+    case "field_css_freeform_widget":
+      $new_items = array();
+      foreach($items as &$item) {
+        $new_items = array_merge($new_items, field_css_parse_freeform($item['style']));
+      }
+      $items = $new_items;
+    break;
+    case 'field_css_structured_widget':
+    break;
+  }
   foreach($items as &$item) {
-    $item['style'] = preg_replace("/[{}]/", "", $item['style']);
-    $item['style'] = trim($item['style']);
+    $item['style'] = trim($item['style'], "{} \t\n\r\0\x0B");
+    $item['selector'] = trim($item['selector']);
   }
   return $items;
 }
 
 /**
+ * helper function to turn normal css in to our structured format
+ *
+ * maybe we should be using something like https://github.com/sabberworm/PHP-CSS-Parser
+ */
+function field_css_parse_freeform($css) {
+  $items = array();
+  $decls = explode("}",$css);
+  foreach($decls as $decl) {
+    if(strpos($decl,"{") !== false) {
+      list($selector, $style) = explode("{", $decl);
+      if(!empty($style)) {
+        $items[] = array("selector"=>trim($selector), "style" => trim($style));
+      }
+    }
+  }
+  return $items;
+}
+
+
+/**
  * Implements hook_field_presave()
  */
 function field_css_field_presave($entity_type, $entity, $field, $instance, $langcode, &$items) {
-  $items = field_css_post_process("type", $items);
+  $items = field_css_post_process($instance['widget']['type'], $items);
 }
 
 /**
@@ -49,7 +79,7 @@ function field_css_field_presave($entity_type, $entity, $field, $instance, $lang
  */
 function field_css_field_validate($entity_type, $entity, $field, $instance, $langcode, $items, &$errors) {
   //lets test items as if they were going to be saved
-  $items = field_css_post_process("type", $items);
+  $items = field_css_post_process($instance['widget']['type'], $items);
   foreach ($items as $delta => $item) {
     if (!empty($item['selector'])) {
       if (preg_match('[{}]', $item['selector'])) {
@@ -76,7 +106,8 @@ function field_css_field_validate($entity_type, $entity, $field, $instance, $lan
  *
  */
 function field_css_field_is_empty($item, $field) {
-  return empty($item['selector']);
+  $style = trim($item['style'], "{} \t\n\r\0\x0B");
+  return empty($style);
 }
 
 /**
@@ -98,6 +129,11 @@ function field_css_field_formatter_info() {
   );
 }
 
+
+function field_css_parse_field($item, $prefix="") {
+  return t("@prefix @selector { \n @style \n}\n", array("@prefix" => $prefix, "@selector" => $item['selector'], "@style" => $item['style']));
+}
+
 /**
  * Implements hook_field_formatter_view().
  *
@@ -110,7 +146,7 @@ function field_css_field_formatter_view($entity_type, $entity, $field, $instance
   $css = "";
 
   foreach ($items as $delta => $item) {
-    $css .= t("@prefix @selector { \n @style \n}\n", array("@prefix" => $prefix, "@selector" => $item['selector'], "@style" => $item['style']));
+    $css .= field_css_parse_field($item);
   }
 
   switch ($display['type']) {
@@ -122,6 +158,7 @@ function field_css_field_formatter_view($entity_type, $entity, $field, $instance
         '#tag' => 'style',
         '#value' => $css
       );
+    break;
     case 'field_css_add_css_formatter':
       drupal_add_css($css, array("type"=>"inline"));
   }
@@ -176,6 +213,7 @@ function field_css_get_prefix($field, $entity_type, $entity) {
       $entity_info = entity_get_info($entity_type);
       $id = isset($entity->{$entity_info['entity keys']['id']}) ? $entity->{$entity_info['entity keys']['id']} : "###";
       $prefix = ".". $entity_type . "-" . $id;
+    break;
     case 'none':
       
   }
@@ -202,20 +240,38 @@ function field_css_field_widget_form(&$form, &$form_state, $field, $instance, $l
         '#type' => 'textarea',
         '#title' => '',
         '#desciption' => "",
-        '#default_value' => $value['style'],
+        '#default_value' => "{\n". $value['style'] ."\n}",
         '#attributes' => array('class' => array("field-css-style", "field-css-wrapped")),
       );
       $element['#attached']['css'] = array(
         drupal_get_path('module', 'field_css') . '/field_css.admin.css',
       );
       $element['#attributes']['class'][] ="field-css-stff";
-      
+    break;
     case 'field_css_freeform_widget':
-      
-      
+
+      if($delta === 0) {
+        $css = array_reduce($items, function($c, $i) { return $c . field_css_parse_field($i);}, "");
+        $element['style'] = array(
+          '#type' => 'textarea',
+          '#title' => '',
+          '#desciption' => "",
+          '#default_value' => array_reduce($items, function($c, $i) { return $c . field_css_parse_field($i);}, ""),
+          '#attributes' => array('class' => array("field-css-style", "field-css-wrapped")),
+        );
+      }
+      else {
+        return;
+      }
   };
   field_css_attach_syntax_highlighting($element['style']);
   return $element;
+}
+
+/**
+ * helper function to freeform widget
+ */
+function field_css_freform_widget_build_css($item) {
 }
 
 /**
