@@ -79,21 +79,30 @@ function field_css_field_presave($entity_type, $entity, $field, $instance, $lang
  */
 function field_css_field_validate($entity_type, $entity, $field, $instance, $langcode, $items, &$errors) {
   //lets test items as if they were going to be saved
-  $items = field_css_post_process($instance['widget']['type'], $items);
+  $w_type = $instance['widget']['type'];
+  $items = field_css_post_process($w_type, $items);
   foreach ($items as $delta => $item) {
     if (!empty($item['selector'])) {
-      if (preg_match('[{}]', $item['selector'])) {
+      $forbid_selector_regexs = "/(:root|\{|\})/";
+      $forbid_selector_text = t("':root', '{' and '}'");
+      if (preg_match($forbid_selector_regexs, $item['selector'])) {
+        //if we are using field_css_freeform_widget then we always error on the 0 item
+        if($w_type == "field_css_freeform_widget") {
+          $delta = 0;
+        }
         $errors[$field['field_name']][$langcode][$delta][] = array(
           'error' => 'Selector not valid',
-          'message' => t('Selector can not contain { or }.'),
+          'message' => t('Selector conteains a forbidden entry. Forbidden entries are @entries.', array("@entries" => $forbid_selector_text)),
         );
       }
     }
     if (!empty($item['style'])) {
-      if (preg_match('[{}]', $item['style'])) {
+      $forbid_style_regexs = "/(\{|\})/";
+      $forbid_style_text = t("'{' and '}'");
+      if (preg_match($forbid_style_regexs, $item['style'])) {
         $errors[$field['field_name']][$langcode][$delta][] = array(
           'error' => 'Style not valid',
-          'message' => t('Style can not contain { or }.'),
+          'message' => t('Style conteains a forbidden entry. Forbidden entries are @entries.', array("@entries" => $forbid_selector_text)),
         );
       }
     }
@@ -128,10 +137,18 @@ function field_css_field_formatter_info() {
     ),
   );
 }
-
+/**
+ * helper function to add prefixes to all of the selectors
+ */
+function field_css_add_prefix($selector, $prefix= "") {
+  $selectors = explode(",", $selector);
+  $selectors = array_map(function($item) use($prefix) { return $prefix . " " . trim($item);}, $selectors);
+  return implode(",\n", $selectors);
+}
 
 function field_css_parse_field($item, $prefix="") {
-  return t("@prefix @selector { \n @style \n}\n", array("@prefix" => $prefix, "@selector" => $item['selector'], "@style" => $item['style']));
+  $selector = field_css_add_prefix($item['selector'], $prefix);
+  return t("@selector { \n @style \n}\n", array("@selector" => $selector, "@style" => $item['style']));
 }
 
 /**
@@ -146,7 +163,7 @@ function field_css_field_formatter_view($entity_type, $entity, $field, $instance
   $css = "";
 
   foreach ($items as $delta => $item) {
-    $css .= field_css_parse_field($item);
+    $css .= field_css_parse_field($item, $prefix);
   }
 
   switch ($display['type']) {
