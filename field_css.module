@@ -30,7 +30,7 @@ function field_css_post_process($widget_type, $items) {
   switch ($widget_type) {
     case "field_css_freeform_widget":
       $new_items = array();
-      foreach($items as &$item) {
+      foreach ($items as &$item) {
         $new_items = array_merge($new_items, field_css_parse_freeform($item['style']));
       }
       $items = $new_items;
@@ -38,7 +38,7 @@ function field_css_post_process($widget_type, $items) {
     case 'field_css_structured_widget':
     break;
   }
-  foreach($items as &$item) {
+  foreach ($items as &$item) {
     $item['style'] = trim($item['style'], "{} \t\n\r\0\x0B");
     $item['selector'] = trim($item['selector']);
   }
@@ -52,12 +52,12 @@ function field_css_post_process($widget_type, $items) {
  */
 function field_css_parse_freeform($css) {
   $items = array();
-  $decls = explode("}",$css);
-  foreach($decls as $decl) {
-    if(strpos($decl,"{") !== false) {
+  $decls = explode("}", $css);
+  foreach ($decls as $decl) {
+    if (strpos($decl, "{") !== FALSE) {
       list($selector, $style) = explode("{", $decl);
-      if(!empty($style)) {
-        $items[] = array("selector"=>trim($selector), "style" => trim($style));
+      if (!empty($style)) {
+        $items[] = array("selector" => trim($selector), "style" => trim($style));
       }
     }
   }
@@ -159,7 +159,7 @@ function field_css_field_formatter_view($entity_type, $entity, $field, $instance
       );
     break;
     case 'field_css_add_css_formatter':
-      drupal_add_css($css, array("type"=>"inline"));
+      drupal_add_css($css, array("type" => "inline"));
   }
   return $element;
 }
@@ -220,7 +220,7 @@ function field_css_get_prefix($field, $entity_type, $entity) {
     case 'entity-item':
       $entity_info = entity_get_info($entity_type);
       $id = isset($entity->{$entity_info['entity keys']['id']}) ? $entity->{$entity_info['entity keys']['id']} : "###";
-      $prefix = ".". $entity_type . "-" . $id;
+      $prefix = "." . $entity_type . "-" . $id;
     break;
     case 'fixed-value';
       $prefix = $field['settings']['prefix_value'];
@@ -236,7 +236,7 @@ function field_css_get_prefix($field, $entity_type, $entity) {
  * Implements hook_field_widget_form().
  */
 function field_css_field_widget_form(&$form, &$form_state, $field, $instance, $langcode, $items, $delta, $element) {
-  $value = isset($items[$delta]) ? $items[$delta] : array("selector"=>"", "style" => "");
+  $value = isset($items[$delta]) ? $items[$delta] : array("selector" => "", "style" => "");
   switch ($instance['widget']['type']) {
 
     case 'field_css_structured_widget':
@@ -251,7 +251,7 @@ function field_css_field_widget_form(&$form, &$form_state, $field, $instance, $l
         '#type' => 'textarea',
         '#title' => '',
         '#desciption' => "",
-        '#default_value' => "{\n". $value['style'] ."\n}",
+        '#default_value' => "{\n" . $value['style'] . "\n}",
         '#attributes' => array('class' => array("field-css-style", "field-css-wrapped")),
       );
       $element['#attached']['css'] = array(
@@ -261,7 +261,7 @@ function field_css_field_widget_form(&$form, &$form_state, $field, $instance, $l
     break;
     case 'field_css_freeform_widget':
 
-      if($delta === 0) {
+      if ($delta === 0) {
         $css = array_reduce($items, function($c, $i) { return $c . field_css_parse_field($i);}, "");
         $element['style'] = array(
           '#type' => 'textarea',
