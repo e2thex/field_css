@@ -160,11 +160,7 @@ function field_css_field_formatter_view($entity_type, $entity, $field, $instance
   $entity_info = entity_get_info($entity_type);
   $prefix = field_css_get_prefix($field, $entity_type, $entity);
   $element = array();
-  $css = "";
-
-  foreach ($items as $delta => $item) {
-    $css .= field_css_parse_field($item, $prefix);
-  }
+  $css = field_css_parse_fields($items, $prefix);
 
   switch ($display['type']) {
     case 'field_css_style_tag_formatter':
@@ -279,12 +275,11 @@ function field_css_field_widget_form(&$form, &$form_state, $field, $instance, $l
     case 'field_css_freeform_widget':
 
       if ($delta === 0) {
-        $css = array_reduce($items, function($c, $i) { return $c . field_css_parse_field($i);}, "");
         $element['style'] = array(
           '#type' => 'textarea',
           '#title' => '',
           '#prefix' => t("All declorations will be prefixed by '@prefix'.", array("@prefix" => field_css_get_prefix($field, $element['#entity_type'], $element['#entity']))),
-          '#default_value' => array_reduce($items, function($c, $i) { return $c . field_css_parse_field($i);}, ""),
+          '#default_value' => field_css_parse_fields($items),
           '#attributes' => array('class' => array("field-css-style", "field-css-wrapped")),
         );
       }
