@@ -146,6 +146,30 @@ function field_css_add_prefix($selector, $prefix= "") {
   return implode(",\n", $selectors);
 }
 
+/**
+ * helper function to parse a set of field_css fields to usable css
+ *
+ * @param array $items
+ *   an array of arrays taken from field_css field entry, it has two items keyed by "selector" and "style"
+ * @param string $prefix
+ *   a string to add to the front of all selectors
+ * @return array
+ *   css ready for inserting.
+ */
+function field_css_parse_fields($items, $prefix="") {
+  return array_reduce($items, function($c, $i) use($prefix) { return $c . field_css_parse_field($i, $prefix);}, "");
+}
+
+/**
+ * helper function to parse afield_css field to usable css
+ *
+ * @param array $item
+ *   an array taken from field_css field entry, it has two items keyed by "selector" and "style"
+ * @param string $prefix
+ *   a string to add to the front of all selectors
+ * @return array
+ *   css ready for inserting.
+ */
 function field_css_parse_field($item, $prefix="") {
   $selector = field_css_add_prefix($item['selector'], $prefix);
   return t("@selector { \n @style \n}\n", array("@selector" => $selector, "@style" => $item['style']));
