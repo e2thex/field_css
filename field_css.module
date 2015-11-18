@@ -171,8 +171,10 @@ function field_css_parse_fields($items, $prefix="") {
  *   css ready for inserting.
  */
 function field_css_parse_field($item, $prefix="") {
-  $selector = field_css_add_prefix($item['selector'], $prefix);
-  return t("@selector { \n @style \n}\n", array("@selector" => $selector, "@style" => $item['style']));
+  // use filter_xss so we do not have to escape this value later
+  $selector = filter_xss(field_css_add_prefix($item['selector'], $prefix));
+  $style = filter_xss($item['style']);
+  return t("!selector { \n !style \n} \n", array("!selector" => $selector, "!style" => $style));
 }
 
 /**
